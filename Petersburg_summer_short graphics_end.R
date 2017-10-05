@@ -5,6 +5,7 @@
 # An input file is required (set with InputFile_name)
 # which following information: 
 # Scenario_Name, Model_Name, Begin_Time, Dir_Name, Test_Dir_Name, File_Name
+# In our case it's "Models_Details.txt"
 #
 # TO DO1: include a possibility to switch the season in the same file
 # (n_season[K]<-06-01; ((month_i[i]=="Èþíü"|month_i[i]=="Èþëü")|(month_i[i]=="Èþëü"|month_i[i]=="Àâãóñò")))
