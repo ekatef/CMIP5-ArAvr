@@ -1,4 +1,4 @@
-R code for work with CMIP5 climate simulation data. The target was to obtain monthly and seasonally means to construct ensemble estimations and to apply modern techniques for analysis of the simulation results
+Set of R-functions for work with CMIP5 climate simulation data. The target was to obtain monthly and seasonally means to construct ensemble estimations and to apply modern techniques for analysis of the simulation results
 
 Options:
 * Automated search and check-up of nc-files inside the specified folder
