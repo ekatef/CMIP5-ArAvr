@@ -4,7 +4,7 @@ library("maps")
 library("abind")
 # library("PCICt")
 # returns a vector of the .nc files' names from the CMIP5 folder
-ListCMIPFiles<-function(CMIP5_Dir_Name = CMIP5_dir_name) {
+ListCMIPFiles <- function(CMIP5_Dir_Name = CMIP5_dir_name) {
 	filesInDir_names <- list.files(CMIP5_Dir_Name)
 	last_chars_in_file_names <- substr(filesInDir_names, nchar(filesInDir_names) - 3 + 1, 
 		nchar(filesInDir_names))
@@ -163,14 +163,16 @@ CheckEnds <- function (DF, YearsRange, MonthBeg, MonthEnd) {
 			"MonthEnd = ", MonthEnd, sep = ""))}	
 	if (MonthBeg > MonthEnd) {stop(paste("Sorry, but MonthBeg should be less than MonthEnd. Set values are",
 			"MonthBeg = ", MonthBeg, "MonthEnd = ", MonthEnd, sep = ""))}
-	# a trick with +/-30 is meant to supply neccecary data for further seasonal interpolation
-	Range_Begin <- paste("01", MonthBeg, min(YearsRange), sep="-")
-	Range_Begin_date <- as.Date(strptime(Range_Begin, format = "%d-%m-%Y")) - 60
-	Range_End <- paste("01", MonthEnd, max(YearsRange), sep="-")
-	Range_End_date <- as.Date(strptime(Range_End, format = "%d-%m-%Y")) + 60 # Range_End = 01 Dec -> all inside next Jan should be taken
+
 	# check if there are enough modelled years to proceed requested years' range
-	# the .nc files are still sorted by modelled dates; so, we just need to check end dates
-	# corrections of the dates are important
+	# the .nc files are still sorted by modelled dates; so, we just need to check end dates		
+	Range_Begin <- paste("01", MonthBeg, min(YearsRange), sep="-")
+	Range_End <- paste("01", MonthEnd, max(YearsRange), sep="-")	
+	# a trick with +/-30 is meant to supply neccecary data for further seasonal interpolation	
+	Range_Begin_date <- as.Date(strptime(Range_Begin, format = "%d-%m-%Y")) - 60
+	Range_End_date <- as.Date(strptime(Range_End, format = "%d-%m-%Y")) + 60 # Range_End = 01 Dec -> all inside next Jan should be taken
+	
+	# corrections of the dates to account for different calendars
 	begin_moment <- as.Date(DF$t0_internal[1], origin = DF$Origin_Time[1])
 	end_moment <- as.Date(DF$tN_internal[length(DF$tN_internal)], 
 		origin = DF$Origin_Time[length(DF$Origin_Time)])
@@ -183,6 +185,22 @@ CheckEnds <- function (DF, YearsRange, MonthBeg, MonthEnd) {
 	end_moment <- end_moment + end_correction
 	Begins_Ok_bool <- (Range_Begin_date > begin_moment)
 	Ends_Ok_bool <- (Range_End_date < end_moment)
+	if (!(Begins_Ok_bool)) {
+		stop(paste0("\n","Not enough modelled years (begin):", "\n",
+			"Model ", DF$ModelName, "\n", "the earliest modelled year is ", 
+			DF$Year_0[1], "corresponding to the date ", begin_moment, " with a correction \n",
+			"which is ", as.Date(DF$t0_internal[1], origin = DF$Origin_Time[1]), " without correction",
+			"\n","the earliest requested year is ", min(YearsRange)))
+	}
+	if (!(Ends_Ok_bool)) {
+		stop(paste0("Not enough modelled years (end):", "\n",
+			"Model ", DF$ModelName, "\n", "the latest modelled year is ", 
+			DF$Year_N[length(DF$Year_N)], " corresponding to the date ", end_moment, " with a correction \n",
+			"which is ", as.Date(DF$tN_internal[length(DF$tN_internal)], 
+				origin = DF$Origin_Time[length(DF$tN_internal)]), " without correction",
+			"\n","the final requested year is ", max(YearsRange), "\n"))
+	}	
+
 	t0_vct <- as.Date(DF$t0_internal, origin = DF$Origin_Time)
 	tN_vct <- as.Date(DF$tN_internal, origin = DF$Origin_Time)
 	t0_correction <- sapply(FUN = function(i) TimeCorrections_in_days(Date_to_Correct_days = t0_vct[i], 
@@ -200,18 +218,8 @@ CheckEnds <- function (DF, YearsRange, MonthBeg, MonthEnd) {
 		# long-timed .nc file contains both ends of the set interval
 	Cond3 <- ((t0_vct < Range_Begin_date) & (tN_vct > Range_Begin_date))
 	Cond4 <- ((t0_vct < Range_End_date) & (tN_vct > Range_End_date))
-	if (!(Begins_Ok_bool)) {
-		stop(paste("\n","Not enough modelled years:", "\n",
-			"Model ", DF$ModelName, "\n", "the earliest modelled year is ", DF$Year_0[1],
-			"\n","the earliest requested year is ", min(YearsRange), sep = ""))
-	}
-	if (!(Ends_Ok_bool)) {
-		stop(paste("Not enough modelled years:", "\n",
-			"Model ", DF$ModelName, "\n", "the latest modelled year is ", 
-			DF$Year_N[length(DF$Year_N)],
-			"\n","the final requested year is ", max(YearsRange), sep = ""))
-	}
 	return(DF[which((Cond1|Cond2)|(Cond3 & Cond4)), , drop = FALSE])
+
 }
 # returns indices of the cells closest to the set boundary values of the coords
 # @ProcFile is a processed nc file
