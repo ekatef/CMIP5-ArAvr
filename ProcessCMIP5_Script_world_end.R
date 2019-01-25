@@ -1,11 +1,14 @@
 # !!! ProcessCMIP5_Script will clean the workspace and set neccesary paths
 rm(list = ls())
+Sys.setenv(LANGUAGE='en')
+
 #  wd_name should be repeated by starting with scratch
 # # TODO: parametrisation
 # wd_name <- "name_the_folder_with_R_code"
 # setwd(wd_name) # for the first run due to rm in the beginning
 
-source("0_ProcessCMIP5_Config.R")
+# # actual config file
+# source("0_ProcessCMIP5_Config_....R")
 source("1_ListModels.R")
 source("2_SelectSeasons.R")
 source("3_Plot_Calcul_Field.R")
@@ -21,76 +24,12 @@ YearsRange_check <- 2045:2054
 # process all years: calculates seasonal mean for each model and the set years
 # & redridn the result on the "standard" mesh
 SeasonsSet <- c(1L:12L)
+calcul_param = "tas"
 
-# # TODO SeasonsSet should be defined as a parameter
-# ProcessSeasonByYears <- function(Avail_List, ModelName, x_Range, 
-# 	y_Range, YearsToCalcul, n_cells){
-#  	StitchedData <- StichModelledFiles(CMIP5_Dir_Name = CMIP5_dir_name, 
-#  		Models_To_Calcul_List = Avail_List, ModelName = ModelName, 
-#  		X_To_Proc_vct = x_Range, Y_To_Proc_vct = y_Range)
-#  	x_grid_model <- StitchedData$Grid_Lon
-#  	y_grid_model <- StitchedData$Grid_Lat
-#  	# results for a single year
-#  	res_list <- lapply(function(Z) ApproxForSeason2(Dates_vct = StitchedData$RealCalendarTime, 
-#  		SeasonPeriods = SeasonsSet, YearVal = Z, Param_3D = StitchedData$T_3D), 
-#  		X = YearsToCalcul)
-#  	res_T_3D <- (Reduce(`+`, res_list)/length(res_list)) # returns gridded seasonal mean
-#  	# x&y corresponds to col&strings resp => x is y, y is x in the interp()
-#  	res_regrid <- RegridModel(param_matrix = res_T_3D, x_bnd = y_Range, y_bnd = x_Range,
-# 		x_grid = y_grid_model, y_grid = x_grid_model, n_Regrid_Cells = n_cells)
-#  	return(res_regrid)
-#  }
-#  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#  #					testing function
-#  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# ExtractSeason_test <- function(Avail_List, ModelName, x_Range, 
-# 	y_Range, YearsToCalcul) {
-# 		StitchedData <- StichModelledFiles(CMIP5_Dir_Name = CMIP5_dir_name, 
-# 	 		Models_To_Calcul_List = Avail_List, ModelName = ModelName, 
-# 	 		X_To_Proc_vct = x_Range, Y_To_Proc_vct = y_Range)
-# 	ExtractSeason_end(Dates_vct = StitchedData$RealCalendarTime, 
-# 		SeasonPeriods = c(9L:11L))
-# }
-# #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#  # @Calcul_df is a list as returns RegridModel(); that is [[i]] component of, e.g., AnnAv_YearsRange_0
-# Output_TabAndPlot <- function (CMIP5_df, Calcul_df, identif_text, RD_name,
-# 	Years_Range_vct1, Years_Range_vct2, ParamLim_vct, TCol_Flag){
-# 	Years_Range_vct1_string <- ifelse(missing(Years_Range_vct1), "", 
-# 		paste("_", Years_Range_vct1[1], "-" , Years_Range_vct1[length(Years_Range_vct1)], sep = ""))
-# 	Years_Range_vct2_string <- ifelse(missing(Years_Range_vct2), "", 
-# 		paste("_", Years_Range_vct2[1], "-" , Years_Range_vct2[length(Years_Range_vct2)], sep = ""))	
-# 	output_name <- paste(identif_text, "_" , unique(CMIP5_df$ParamName), "_",
-# 			unique(CMIP5_df$ScenarioName), "_",
-# 			"months_", SeasonsSet[1], "-", SeasonsSet[length(SeasonsSet)],
-# 			Years_Range_vct1_string, Years_Range_vct2_string, sep= "")
-# 	pdf_name <- paste(RD_name, output_name, ".pdf", sep = "")
-# 	txt_name <- paste(RD_name, output_name, ".txt", sep = "")
-# 	write.table(file = txt_name, Calcul_df, row.names = FALSE)
-# 	if (missing(ParamLim_vct)) ParamLim_vct <- c(min(Calcul_df$z, na.rm = TRUE),
-# 			max(Calcul_df$z, na.rm = TRUE))	
-# 	if (missing(TCol_Flag)) {
-# 		if (CMIP5_df$ParamName[i] == "tas") {
-# 				TCol_Flag <- TRUE
-# 		} else {TCol_Flag <- FALSE}
-# 	}
-# 	pdf(pdf_name, width=360/30, height = (180)/30)
-# 	PlotFieldGlob(MatrixToPlot = Calcul_df$z, 
-# 		xToPlot = Calcul_df$y, 
-# 		yToPlot = Calcul_df$x,
-# 		ZLimParam = ParamLim_vct, PlotInfo = "", 
-# 		PlotTit_Text = output_name,TCol = TCol_Flag,
-# 		value_ofThickCount = NULL, NSign = 3, NCLevels = 7)
-# 	dev.off()
-# }
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# inspect model files in the dir
-# adjustment work is needed by first call of the working dir
-# (delete incomplete time periods, check modelled parameters etc.)
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# extract models info from current .nc dir; may take quite long
-CMIP5ModelsInfo_df <- ExtractModels(CMIP5_Dir_Name = CMIP5_dir_name)
+CMIP5ModelsInfo_df <- ExtractModels(CMIP5_Dir_Name = CMIP5_dir_name,
+	param_name = calcul_param)
 str(CMIP5ModelsInfo_df)
+
 Avail_in_Year_0 <- SelectAvailbleByTime(ExtractedModels_df = CMIP5ModelsInfo_df, 
 	YearsRange = YearsRange_check_0, MonthBeg = 1L, MonthEnd = 12L)
 Avail_in_Year <- SelectAvailbleByTime(ExtractedModels_df = CMIP5ModelsInfo_df, 
