@@ -38,7 +38,8 @@ TimeCorrections_in_days <- function(Date_to_Correct_days,
 }
 # look to the CMIP5 dir for the simulation files
 # return a dataframe with parameters of the models
-ExtractModels <- function(CMIP5_Dir_Name = CMIP5_dir_name) {
+ExtractModels <- function(CMIP5_Dir_Name = CMIP5_dir_name, 
+	param_name) {
 	# reading from the CMIP5 simulation file
 	SimParam_df <- data.frame(FileName = character(), ModelName = character(), 
 		ScenarioName = character(), ParamName = character(), Calendar = character(),
@@ -56,12 +57,16 @@ ExtractModels <- function(CMIP5_Dir_Name = CMIP5_dir_name) {
 	# for (i in 1:2) { # testing statement
 		setTxtProgressBar(StatBar, i, label = i)
 		file_nc_obj <- nc_open(filesInDir_names_with_path[i], verbose=FALSE)
-		# the target variable is the last one (temperature/precip/runoff etc)
-		param_name <- file_nc_obj$var[[length(file_nc_obj$var)]]$name
+
+		# # TODO: we know the parameter name, don't we?
+		# # the target variable is the last one (temperature/precip/runoff etc)
+		# param_name <- file_nc_obj$var[[length(file_nc_obj$var)]]$name
+
 		file_attributes <- ncatt_get(file_nc_obj, varid=0)
 		model_name <- file_attributes$model_id
 		scenario_name <- file_attributes$experiment_id
-		time_attributes <- ncatt_get( file_nc_obj, varid = "time", attname=NA, verbose=FALSE)
+		time_attributes <- ncatt_get( file_nc_obj, varid = "time", 
+			attname = NA, verbose = FALSE)
 		calendar_nc <- time_attributes$calendar
 		# non-standard calendars require respective corrections
 		t0_correction_days <- 0
@@ -112,12 +117,22 @@ ExtractModels <- function(CMIP5_Dir_Name = CMIP5_dir_name) {
 	if (length(unique(SimParam_df$ScenarioName))!=1) {
 		message("The models imply following parameters")
 		print(SimParam_df[ ,c("ModelName","ScenarioName","Year_0","Year_N"), drop = FALSE])
-		stop("The considered scenarios are different. Please check the processed files")
+		stop(paste("The considered scenarios are different:",
+					paste(unique(SimParam_df$ScenarioName), collapse = ", "),
+					"\\n",
+					"Please check the processed files"))
 	}	
 	if (length(unique(SimParam_df$ParamName))!=1) {
 		message("The models contain following parameters")
 		print(SimParam_df[ ,c("ModelName","ParamName","Year_0","Year_N"), drop = FALSE])
-		stop("The considered parameters are different. Please check the processed files")
+		stop(
+			paste(
+				"The considered parameters are different:",
+				paste(unique(SimParam_df$ParamName), collapse = ", "),
+				"\\n",
+				"Please check the processed files"
+				)
+			)
 	}
 	# all fileds except ArrayID [9th column] should be unique
 	UniqueRows_length <- length(unique(SimParam_df[,-9])[,1])
@@ -271,13 +286,16 @@ ExtractGrid <- function(ProcFile, x_bnd, y_bnd) {
 # @wd_name is the name of a dir with the code to execute
 # @File_To_Proc_Name is the name of .nc file
 # @x_To_Proc_vct, y_To_Proc_vct are coordinates of the considered area
+# 
 ReadModelFile <- function(CMIP5_Dir_Name, File_To_Proc_Name,
-	X_To_Proc_vct, Y_To_Proc_vct) {
+	X_To_Proc_vct, Y_To_Proc_vct, param_name) {
 	#TO DO Check-ups!!!
 	# setwd(CMIP5_dir_name)
 	File_To_Proc_Name_full <- paste(CMIP5_Dir_Name, File_To_Proc_Name, sep ="")
  	file_nc_obj_procSsn <- nc_open(File_To_Proc_Name_full, verbose=FALSE)
-	paramForProc_name <- file_nc_obj_procSsn$var[[length(file_nc_obj_procSsn$var)]]$name
+ 	# # different files may habe different structures, param name should be used instead
+	# paramForProc_name <- file_nc_obj_procSsn$var[[length(file_nc_obj_procSsn$var)]]$name
+	paramForProc_name <- param_name
 	fileForProc_attributes <- ncatt_get(file_nc_obj_procSsn,varid=0)
 	modelForProc_name <- fileForProc_attributes$model_id
 	scenarioForProc_name <- fileForProc_attributes$experiment_id
@@ -337,11 +355,14 @@ SelectAvailbleByTime <- function(ExtractedModels_df, YearsRange,
 }
 # @Models_To_Calcul_List is a list obtained by SelectAvailbleByTime()
 StichModelledFiles <- function(CMIP5_Dir_Name, Models_To_Calcul_List, 
-	ModelName, X_To_Proc_vct, Y_To_Proc_vct) {
+	ModelName, X_To_Proc_vct, Y_To_Proc_vct, param_name) {
 	# along files for a certain model
-	test_model <- lapply(function(i) ReadModelFile(CMIP5_Dir_Name = CMIP5_Dir_Name,
-		File_To_Proc_Name = Models_To_Calcul_List[[ModelName]]$FileName[i], 
-		X_To_Proc_vct = X_To_Proc_vct, Y_To_Proc_vct = Y_To_Proc_vct), 
+	test_model <- lapply(function(i) {
+		ReadModelFile(CMIP5_Dir_Name = CMIP5_Dir_Name,
+			File_To_Proc_Name = Models_To_Calcul_List[[ModelName]]$FileName[i], 
+			X_To_Proc_vct = X_To_Proc_vct, Y_To_Proc_vct = Y_To_Proc_vct,
+			param_name = param_name)
+		}, 
 		X = seq(Models_To_Calcul_List[[ModelName]]$FileName))
 	# tau <- list(time_nc = time_nc, N_time_begin = N_time_begin,
 	# 	calendar_nc = calendar_nc)
@@ -370,9 +391,12 @@ StichModelledFiles <- function(CMIP5_Dir_Name, Models_To_Calcul_List,
 	time_as_date_vct <- do.call(`c`, test_to_date)	
 	# TO DO: calendar correction!!!	
 	# for calendar corrections
-	time_corrections <- lapply(function(i) TimeCorrections_in_days(Date_to_Correct_days = test_time_days[[i]],
-	Original_nc_Calendar = test_time_calendar[[i]], Origin_Time = test_time_origin[[i]]), 
-	X = seq(along.with = test_time_days))
+	time_corrections <- lapply(
+		{function(i) TimeCorrections_in_days(Date_to_Correct_days = test_time_days[[i]],
+		 			Original_nc_Calendar = test_time_calendar[[i]], 
+		 			Origin_Time = test_time_origin[[i]])},
+		X = seq(along.with = test_time_days)
+	)
 	time_corrections_vct <- do.call(`c`, time_corrections)
 	time_corrected_vct <- time_as_date_vct + time_corrections_vct
 	test_T_3D_combined <- do.call(abind, list(test_T_3D, along = 3))
