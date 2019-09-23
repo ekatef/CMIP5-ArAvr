@@ -4,22 +4,31 @@ ProcessSeasonByYears <- function(Avail_List, ModelName,
 	x_Range, y_Range, param_name,
 	SeasonsToCalcul, YearsToCalcul, 
 	n_cells){
+
  	StitchedData <- StichModelledFiles(CMIP5_Dir_Name = CMIP5_dir_name, 
  		Models_To_Calcul_List = Avail_List, ModelName = ModelName, 
  		X_To_Proc_vct = x_Range, Y_To_Proc_vct = y_Range, 
  		param_name = param_name)
+
  	x_grid_model <- StitchedData$Grid_Lon
  	y_grid_model <- StitchedData$Grid_Lat
+
  	# list of results (2D matrices) for a single year
- 	res_list <- lapply(function(Z) ApproxForSeason2(Dates_vct = StitchedData$RealCalendarTime, 
- 		SeasonPeriods = SeasonsToCalcul, YearVal = Z, Param_3D = StitchedData$T_3D), 
- 		X = YearsToCalcul)
+ 	res_list <- lapply(
+ 		function(Z) {
+ 			ApproxForSeason2(Dates_vct = StitchedData$RealCalendarTime, 
+ 		 		SeasonPeriods = SeasonsToCalcul, 
+ 		 		YearVal = Z, Param_3D = StitchedData$T_3D)
+ 		}, X = YearsToCalcul
+ 	)
+
  	res_T_3D <- (Reduce(`+`, res_list)/length(res_list)) # returns gridded seasonal mean
  	# x&y corresponds to col&strings resp => x is y, y is x in the interp()
  	res_regrid <- RegridModel(param_matrix = res_T_3D, 
  		x_bnd = y_Range, y_bnd = x_Range,
 		x_grid = y_grid_model, y_grid = x_grid_model, 
 		n_Regrid_Cells = n_cells)
+
  	return(res_regrid)
  }
 
@@ -27,20 +36,24 @@ TsSeasonByYears <- function(Avail_List, ModelName,
 	x_Range, y_Range, param_name,
 	SeasonsToCalcul, YearsToCalcul, 
 	n_cells){
+
  	StitchedData <- StichModelledFiles(CMIP5_Dir_Name = CMIP5_dir_name, 
  		Models_To_Calcul_List = Avail_List, ModelName = ModelName, 
- 		X_To_Proc_vct = x_Range, Y_To_Proc_vct = y_Range, param_name = param_name)
+ 		X_To_Proc_vct = x_Range, Y_To_Proc_vct = y_Range, 
+ 		param_name = param_name)
+
  	x_grid_model <- StitchedData$Grid_Lon
  	y_grid_model <- StitchedData$Grid_Lat
+
  	# list of results (2D matrices) for a single year
  	res_list <- lapply(function(Z) ApproxForSeason2(Dates_vct = StitchedData$RealCalendarTime, 
  		SeasonPeriods = SeasonsToCalcul, YearVal = Z, Param_3D = StitchedData$T_3D), 
  		X = YearsToCalcul)
- 	# return(res_list)
 
  	res <- unlist(lapply(X = res_list, FUN = mean))
  	return(res)
 
+ 	# # a built-in approach to the seasonal means
  	# res_T_3D <- (Reduce(`+`, res_list)/length(res_list)) # returns gridded seasonal mean
  	# # x&y corresponds to col&strings resp => x is y, y is x in the interp()
  	# res_regrid <- RegridModel(param_matrix = res_T_3D, 
@@ -55,18 +68,83 @@ TsSeasonByYears <- function(Avail_List, ModelName,
  #					testing function
  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # returns dates 
-ExtractSeason_test <- function(Avail_List, ModelName, 
-	x_Range, y_Range, param_name,
-	SeasonsToCalcul, YearsToCalcul) {
-		StitchedData <- StichModelledFiles(CMIP5_Dir_Name = CMIP5_dir_name, 
+ExtractSeason_test <- function(
+	Avail_List, 
+	ModelName, 
+	x_Range, 
+	y_Range, 
+	param_name,
+	SeasonsToCalcul, 
+	YearsToCalcul, 
+	CMIP5_Dir_Name = CMIP5_dir_name) {
+# TODO resolve hard-coding	
+	StitchedData <- StichModelledFiles(CMIP5_Dir_Name = CMIP5_Dir_Name, 
 	 		Models_To_Calcul_List = Avail_List, ModelName = ModelName, 
-	 		X_To_Proc_vct = x_Range, Y_To_Proc_vct = y_Range, param_name = param_name)
+	 		X_To_Proc_vct = x_Range, Y_To_Proc_vct = y_Range, 
+	 		param_name = param_name)
+	ExtractSeason_end(Dates_vct = StitchedData$RealCalendarTime, 
+		SeasonPeriods = SeasonsToCalcul)
+}
+
+
+# returns dates 
+ExtractSeason_test2 <- function(
+	Avail_List, 
+	ModelName, 
+	x_Range, 
+	y_Range, 
+	param_name,
+	SeasonsToCalcul, 
+	YearsToCalcul, 
+	CMIP5_Dir_Name = CMIP5_dir_name) {
+# TODO resolve hard-coding	
+	StitchedData <- StichModelledFiles(CMIP5_Dir_Name = CMIP5_Dir_Name, 
+	 		Models_To_Calcul_List = Avail_List, ModelName = ModelName, 
+	 		X_To_Proc_vct = x_Range, Y_To_Proc_vct = y_Range, 
+	 		param_name = param_name)
+	return(StitchedData)
 	ExtractSeason_end(Dates_vct = StitchedData$RealCalendarTime, 
 		SeasonPeriods = SeasonsToCalcul)
 }
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
  # @Calcul_df is a list as returns RegridModel(); that is [[i]] component of, e.g., AnnAv_YearsRange_0
 Output_TabAndPlot <- function (CMIP5_df, Calcul_df, identif_text, RD_name,
+	Years_Range_vct1, Years_Range_vct2, ParamLim_vct, TCol_Flag){
+
+	Years_Range_vct1_string <- ifelse(missing(Years_Range_vct1), "", 
+		paste("_", Years_Range_vct1[1], "-" , Years_Range_vct1[length(Years_Range_vct1)], sep = ""))
+	Years_Range_vct2_string <- ifelse(missing(Years_Range_vct2), "", 
+		paste("_", Years_Range_vct2[1], "-" , Years_Range_vct2[length(Years_Range_vct2)], sep = ""))	
+
+	output_name <- paste(identif_text, "_" ,
+			"months_", SeasonsSet[1], "-", SeasonsSet[length(SeasonsSet)],
+			Years_Range_vct1_string, Years_Range_vct2_string, sep= "")
+
+	pdf_name <- paste(RD_name, output_name, ".pdf", sep = "")
+	txt_name <- paste(RD_name, output_name, "_wide_format.txt", sep = "")
+
+	# coersion of a list to a data frame
+	write.table(file = txt_name, Calcul_df, row.names = FALSE)
+
+	if (missing(ParamLim_vct)) ParamLim_vct <- c(min(Calcul_df$z, na.rm = TRUE),
+			max(Calcul_df$z, na.rm = TRUE))	
+	if (missing(TCol_Flag)) {
+		if (CMIP5_df$ParamName[i] == "tas") {
+				TCol_Flag <- TRUE
+		} else {TCol_Flag <- FALSE}
+	}
+	pdf(pdf_name, width = 360/30, height = (180)/30)
+	PlotFieldGlob(MatrixToPlot = Calcul_df$z, 
+		xToPlot = Calcul_df$y, 
+		yToPlot = Calcul_df$x,
+		ZLimParam = ParamLim_vct, PlotInfo = "", 
+		PlotTit_Text = output_name,TCol = TCol_Flag,
+		value_ofThickCount = NULL, NSign = 3, NCLevels = 7)
+	dev.off()
+}
+ # @Calcul_df is a list as returns RegridModel(); that is [[i]] component of, e.g., AnnAv_YearsRange_0
+Output_Tab <- function (CMIP5_df, Calcul_df, identif_text, RD_name,
 	Years_Range_vct1, Years_Range_vct2, ParamLim_vct, TCol_Flag){
 	Years_Range_vct1_string <- ifelse(missing(Years_Range_vct1), "", 
 		paste("_", Years_Range_vct1[1], "-" , Years_Range_vct1[length(Years_Range_vct1)], sep = ""))
@@ -79,44 +157,61 @@ Output_TabAndPlot <- function (CMIP5_df, Calcul_df, identif_text, RD_name,
 	pdf_name <- paste(RD_name, output_name, ".pdf", sep = "")
 	txt_name <- paste(RD_name, output_name, ".txt", sep = "")
 	write.table(file = txt_name, Calcul_df, row.names = FALSE)
-	if (missing(ParamLim_vct)) ParamLim_vct <- c(min(Calcul_df$z, na.rm = TRUE),
-			max(Calcul_df$z, na.rm = TRUE))	
-	if (missing(TCol_Flag)) {
-		if (CMIP5_df$ParamName[i] == "tas") {
-				TCol_Flag <- TRUE
-		} else {TCol_Flag <- FALSE}
-	}
-	pdf(pdf_name, width=360/30, height = (180)/30)
-	PlotFieldGlob(MatrixToPlot = Calcul_df$z, 
-		xToPlot = Calcul_df$y, 
-		yToPlot = Calcul_df$x,
-		ZLimParam = ParamLim_vct, PlotInfo = "", 
-		PlotTit_Text = output_name,TCol = TCol_Flag,
-		value_ofThickCount = NULL, NSign = 3, NCLevels = 7)
-	dev.off()
+	return(NULL)
 }
 
+ # @Calcul_df is a list as returns RegridModel(); that is [[i]] component of, e.g., AnnAv_YearsRange_0
+Output_LongTab <- function (CMIP5_df, Calcul_df, identif_text, RD_name,
+	Years_Range_vct1, Years_Range_vct2){
 
+	library(dplyr)
+	# LongTab <- Calcul_df %>% gather("x", "value", -y)
 
+	if (is.null(Calcul_df[["x"]])) {
+		data_df <- Calcul_df
+	} else{
+		data_df <- data.frame(x = Calcul_df[["x"]], y = Calcul_df[["y"]],
+			Calcul_df[["z"]])
+	}	
 
+	data_df_tmp <- data_df
+	colnames(data_df_tmp)[-(1:2)] <- paste0("y_", data_df_tmp$y)
+	# print(head(data_df_tmp[, 1:10]))
+	
+	data_df_long <- data_df_tmp %>% select(-y) %>%
+		gather(key, value, -x) %>%
+		mutate(y = as.numeric(str_replace(key, "y_", ""))) %>%
+		select(x, y, value) %>%
+		filter(!is.na(value))
 
-
-
-
-
-
-
-
-
-
+	Years_Range_vct1_string <- ifelse(missing(Years_Range_vct1), "", 
+		paste("_", Years_Range_vct1[1], "-" , 
+			Years_Range_vct1[length(Years_Range_vct1)], sep = ""))
+	Years_Range_vct2_string <- ifelse(missing(Years_Range_vct2), "", 
+		paste("_", Years_Range_vct2[1], "-" , 
+			Years_Range_vct2[length(Years_Range_vct2)], sep = ""))	
+	# output_name <- paste(identif_text, "_" , unique(CMIP5_df$ParamName), "_",
+	# 		unique(CMIP5_df$ScenarioName), "_",
+	# 		"months_", SeasonsSet[1], "-", SeasonsSet[length(SeasonsSet)],
+	# 		Years_Range_vct1_string, Years_Range_vct2_string, sep= "")
+	output_name <- paste(identif_text, "_" ,
+			"months_", SeasonsSet[1], "-", SeasonsSet[length(SeasonsSet)],
+			Years_Range_vct1_string, Years_Range_vct2_string, sep= "")	
+	pdf_name <- paste(RD_name, output_name, ".pdf", sep = "")
+	txt_name <- paste(RD_name, output_name, ".txt", sep = "")
+	write.table(file = txt_name, data_df_long, row.names = FALSE)
+	return(NULL)
+}
 
 #~~~~~~~~~~~~~~~~~~ functions to work with nc data ~~~~~~~~~~~~~~~~~~~~~~~~
 # @Dates_vct vector of the Date class, @SeasonPeriods is a month's index in a year
 # returns an dataframe with dates and indices of entries corresponding to a certain season
 ExtractSeason_end <- function(Dates_vct, SeasonPeriods = c(9L:11L)){
 	acceptable_range <- 1L:12L
-	if (!(all(SeasonPeriods %in% acceptable_range))) {stop(paste("The month index is outside the acceptable range: ",
-			"SeasonPeriods = ", SeasonPeriods, sep = ""))}
+	if (!(all(SeasonPeriods %in% acceptable_range))) {
+		stop(paste("The month index is outside the acceptable range: ",
+			"SeasonPeriods = ", SeasonPeriods, sep = ""))
+	}
 	modelled_months <- as.integer(format(Dates_vct, "%m"))
 	modelled_years <- as.integer(format(Dates_vct, "%Y"))
 	set_of_years <- unique(modelled_years)
@@ -165,13 +260,18 @@ ExtractSeason_end <- function(Dates_vct, SeasonPeriods = c(9L:11L)){
 # @YearVal is a **single** value of a year to be processed!
 # @Param_3D is a 3D array [along_y, along_x, along_tau]
 # @Dates_vct vector of the Date class, @SeasonPeriods is a month's index in a year
-ApproxForSeason2 <- function(Dates_vct, SeasonPeriods = c(6L:8L), YearVal, Param_3D) {
+ApproxForSeason2 <- function(Dates_vct, SeasonPeriods = c(6L:8L), 
+	YearVal, Param_3D) {
+
 	acceptable_range <- 1L:12L
-	if (!(all(SeasonPeriods %in% acceptable_range))) {stop(paste("The month index is outside the acceptable range: ",
-			"SeasonPeriods = ", SeasonPeriods, sep = ""))}	
+	if (!(all(SeasonPeriods %in% acceptable_range))) {
+		stop(paste("The month index is outside the acceptable range: ",
+			"SeasonPeriods = ", SeasonPeriods, sep = ""))
+	}
+
 	SeasonalEntries <- ExtractSeason_end(Dates_vct = Dates_vct, 
 		SeasonPeriods = SeasonPeriods)
-	SeasonSeqBeg_string <- paste("01-", min(SeasonPeriods), "-", YearVal, sep = "")
+	SeasonSeqBeg_string <- paste0("01-", min(SeasonPeriods), "-", YearVal)
 	SeasonSeqBeg_date <- as.Date(SeasonSeqBeg_string, format = "%d-%m-%Y")
 
 	# generate the last day of season by step 1 day back from the begin of the next season
@@ -183,9 +283,9 @@ ApproxForSeason2 <- function(Dates_vct, SeasonPeriods = c(6L:8L), YearVal, Param
 	SeasonSeqEnd_date <- as.Date(SeasonSeqEnd_string, format = "%d-%m-%Y") - 1
 	int_to_period <- seq.Date(from = SeasonSeqBeg_date, to = SeasonSeqEnd_date, 
 		by = 1)
-	# SeasonAveraging <- function(Array_to_Proc, i_inp, j_inp, k_inp, t_In, t_Out) {
-	# 	ApprVal <- approx(x = t_In, y = Array_to_Proc[i_inp, j_inp, k_inp], xout = t_Out)
-	# }	
+	SeasonAveraging <- function(Array_to_Proc, i_inp, j_inp, k_inp, t_In, t_Out) {
+		ApprVal <- approx(x = t_In, y = Array_to_Proc[i_inp, j_inp, k_inp], xout = t_Out)
+	}	
 	# $SeasnlYears contains unique years only => the which result will be integer (with 0 length is there are no entries)
 	SeasnlYears <- SeasonalEntries[["SeasnlYears"]]
 	i_OfYearsRange <- which(SeasnlYears %in% YearVal)
