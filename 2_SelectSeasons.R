@@ -196,7 +196,7 @@ Output_LongTab <- function (CMIP5_df, Calcul_df, identif_text, RD_name,
 	# 		Years_Range_vct1_string, Years_Range_vct2_string, sep= "")
 	output_name <- paste(identif_text, "_" ,
 			"months_", SeasonsSet[1], "-", SeasonsSet[length(SeasonsSet)],
-			Years_Range_vct1_string, Years_Range_vct2_string, sep= "")	
+			Years_Range_vct1_string, Years_Range_vct2_string, sep = "")	
 	pdf_name <- paste(RD_name, output_name, ".pdf", sep = "")
 	txt_name <- paste(RD_name, output_name, ".txt", sep = "")
 	write.table(file = txt_name, data_df_long, row.names = FALSE)
