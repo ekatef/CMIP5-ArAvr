@@ -65,7 +65,7 @@ max_mean <- function(x, conf_lev = 0.9){
 	if (sum(!is.na(x)) >= 3) {
 		zero_t_res <- t.test(x, rep(0, times = length(x)),
 			conf.level = conf_lev)
-		return(zero_t_res$estimate[1] + zero_t_res$conf.int[1])
+		return(zero_t_res$estimate[1] + zero_t_res$conf.int[2])
 	} else {
 		return(NA)
 	}	
@@ -74,7 +74,7 @@ min_mean <- function(x, conf_lev = 0.9){
 	if (sum(!is.na(x)) >= 3) {
 		zero_t_res <- t.test(x, rep(0, times = length(x)),
 			conf.level = conf_lev)
-		return(zero_t_res$estimate[1] + zero_t_res$conf.int[2])
+		return(zero_t_res$estimate[1] + zero_t_res$conf.int[1])
 	} else {
 		return(NA)
 	}	
@@ -169,8 +169,9 @@ PlotGlobal <- function(MatrixToPlot, xToPlot, yToPlot,
 		mypalette <- rgb(
 			red = (100:0)/100,
 			green = (c(seq(from = 0,to = 90,length = 25),
-				rep(90,times = 50),seq(from = 90,to = 0,length = 25)))/100,
-			blue = 0:100)/100)
+				rep(90,times = 50),
+				seq(from = 90,to = 0,length = 25)))/100,
+			blue = (0:100)/100)
 	}
 	pr_min <- min(MatrixToPlot, na.rm = TRUE)
 	pr_max <- max(MatrixToPlot, na.rm = TRUE)
@@ -776,7 +777,7 @@ PlotLattField_play <- function(spartial_inp,
 			lty = 1, lwd = 0.5, fill = 'black', col = 'black', pch = 21,
 			type = c("l", "g"), 
 			# type = c("l"), 
-			cex = 3,
+			cex = 0.5,
 			# margin = TRUE,
 			panel = function(...) {
 				panel.xyplot(...)
@@ -799,9 +800,9 @@ PlotLattField_play <- function(spartial_inp,
 			# pretty = TRUE, 
 
 			## throws an error
-			at = custom_cuts,
+			at = custom_cuts.,
 			colorkey = list(col = cols, 
-				at = custom_cuts),
+				at = custom_cuts.),
 
 			# cuts = length(cols) - 2,
 			aspect = 0.4, 
@@ -846,7 +847,7 @@ PlotLattField_play <- function(spartial_inp,
 	}
 
 	if (!(is.null(points_df.))) {
-		xyp <- xyplot(data = points_df, lat ~ long,
+		xyp <- xyplot(data = points_df., lat ~ long,
 			col = "gray10", pch = 20, cex = 2)
 		res <- res + as.layer(xyp)
 	}	
