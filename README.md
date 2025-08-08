@@ -17,7 +17,7 @@ Processing of monthly-aggregated data to assess multidecadal dynamics of the (ar
 2. Download the project files
 3. Set the data directory and the results directory in the local-config "0_ProcessCMIP5_Config_local.R". It is convenient to set that file to --assume-unchanged in git
 4. Extract the models meta data
-5. Check that continuous time-series are present for each requires time span
+5. Check that continuous time-series are present for each time span of interest
 6. Form list of spatial matrices for each model by requested time spans
 7. Calculate ensemble estimations
 8. Visualize!
